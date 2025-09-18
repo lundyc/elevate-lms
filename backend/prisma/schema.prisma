@@ -1,0 +1,120 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         Int         @id @default(autoincrement())
+  email      String      @unique
+  password   String
+  role       String
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // Relations
+  logs       AuditLog[]
+  picks      Pick[]
+  payments   Payment[]
+  teams      Team[]      @relation("TeamAdmins")
+}
+
+model Club {
+  id         Int       @id @default(autoincrement())
+  name       String
+  contact    String?
+  email      String?
+  phone      String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  // Relations
+  teams      Team[]
+  games      Game[]
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String
+  clubId    Int
+  club      Club     @relation(fields: [clubId], references: [id])
+  
+  // Relations
+  admins    User[]   @relation("TeamAdmins")
+  games     Game[]
+}
+
+model Game {
+  id              Int       @id @default(autoincrement())
+  name            String
+  entryFee        Float
+  buyBackWeek     Int?
+  startWeek       Int
+  status          String    @default("pending")
+  potTotal        Float     @default(0)
+  rolloverFromId  Int?
+  clubId          Int
+  teamId          Int
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  rolloverFrom    Game?     @relation("Rollover", fields: [rolloverFromId], references: [id])
+  rolloverTo      Game[]    @relation("Rollover")
+  club            Club      @relation(fields: [clubId], references: [id])
+  team            Team      @relation(fields: [teamId], references: [id])
+  picks           Pick[]
+  payments        Payment[]
+}
+
+model Pick {
+  id        Int      @id @default(autoincrement())
+  gameId    Int
+  userId    Int
+  week      Int
+  team      String
+  outcome   String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  game      Game     @relation(fields: [gameId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Payment {
+  id         Int      @id @default(autoincrement())
+  gameId     Int
+  userId     Int
+  amount     Float
+  type       String   // entry or buyback
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+
+  // Relations
+  game       Game     @relation(fields: [gameId], references: [id])
+  user       User     @relation(fields: [userId], references: [id])
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  details   String?
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  // Relations
+  user      User?    @relation(fields: [userId], references: [id])
+}
+
+model Rollover {
+  id           Int      @id @default(autoincrement())
+  fromGameId   Int
+  toGameId     Int
+  amount       Float
+  createdAt    DateTime @default(now())
+}
